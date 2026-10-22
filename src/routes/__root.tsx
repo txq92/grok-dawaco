@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Tính tiền nước theo số nhân khẩu và sản lượng. Định mức 4 m³/người. Tổng chưa gồm VAT và phí khác.",
+          "Tính tiền nước theo số nhân khẩu và sản lượng. Định mức 4 m³/người. Đơn giá đã gồm VAT và phí.",
       },
       { name: "theme-color", content: "#F3F0E8" },
     ],

@@ -1,7 +1,7 @@
 import { i as __toESM } from "../_runtime.mjs";
 import { K as require_react, b as require_jsx_runtime } from "../_libs/@tanstack/react-router+[...].mjs";
 import { a as Droplets, i as Info, r as RotateCcw, t as Users } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-JYDmR7Eh.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-C_Tt_0y-.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var PRICE_KEYS = [
@@ -128,6 +128,7 @@ function formatUnitPrice(price) {
 	return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 }).format(price);
 }
 var STORAGE_KEY = "tien-nuoc:v1";
+var CALC_MS = 900;
 var SAMPLE = {
 	people: "3",
 	volume: "32",
@@ -158,6 +159,8 @@ function WaterDesk() {
 	const [draft, setDraft] = (0, import_react.useState)(SAMPLE);
 	const [ready, setReady] = (0, import_react.useState)(false);
 	const [copied, setCopied] = (0, import_react.useState)(false);
+	const [progress, setProgress] = (0, import_react.useState)(0);
+	const [settled, setSettled] = (0, import_react.useState)(false);
 	const baseId = (0, import_react.useId)();
 	(0, import_react.useEffect)(() => {
 		try {
@@ -176,6 +179,35 @@ function WaterDesk() {
 	const parsed = (0, import_react.useMemo)(() => parseBill(draft), [draft]);
 	const result = parsed.ok ? calculateBill(parsed.people, parsed.volume, parsed.prices) : null;
 	const errors = parsed.ok ? [] : parsed.errors;
+	const signature = parsed.ok ? `${parsed.people}|${parsed.volume}|${PRICE_KEYS.map((key) => parsed.prices[key]).join(",")}` : "";
+	(0, import_react.useEffect)(() => {
+		if (!signature) {
+			setProgress(0);
+			setSettled(false);
+			return;
+		}
+		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+			setProgress(100);
+			setSettled(true);
+			return;
+		}
+		setProgress(0);
+		setSettled(false);
+		const start = performance.now();
+		let frame = 0;
+		const tick = (now) => {
+			const ratio = Math.min(1, (now - start) / CALC_MS);
+			const eased = 1 - (1 - ratio) ** 2;
+			setProgress(Math.round(eased * 100));
+			if (ratio < 1) frame = requestAnimationFrame(tick);
+			else {
+				setProgress(100);
+				setSettled(true);
+			}
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	}, [signature]);
 	function setPeople(people) {
 		setDraft((current) => ({
 			...current,
@@ -217,7 +249,7 @@ function WaterDesk() {
 			`Định mức: ${formatVolume(result.quota)}`,
 			lines,
 			`Tổng: ${formatVnd(result.total)}`,
-			"Chưa gồm VAT và các khoản phí khác."
+			"Đơn giá đã gồm VAT và các khoản phí."
 		].join("\n");
 		try {
 			await navigator.clipboard.writeText(text);
@@ -247,7 +279,7 @@ function WaterDesk() {
 					}),
 					/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 						className: "max-w-2xl text-base leading-relaxed text-muted",
-						children: "Nhập số người và lượng nước trong tháng. Trang chia sản lượng vào định mức, từng bậc giá, rồi cộng tiền — chưa gồm thuế và phí."
+						children: "Nhập số người và lượng nước trong tháng. Trang chia sản lượng vào định mức, từng bậc giá, rồi cộng tiền. Đơn giá đã gồm VAT và phí."
 					})
 				]
 			}),
@@ -335,30 +367,49 @@ function WaterDesk() {
 										className: "text-sm font-medium text-surface/80",
 										children: "Tổng tiền nước"
 									}),
-									result ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-										className: "font-display mt-2 text-4xl leading-none font-semibold break-words tabular-nums sm:text-6xl",
+									/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+										className: "mt-4 flex items-center justify-between gap-3 text-sm font-medium",
+										children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: settled ? "Đã tính xong" : parsed.ok ? "Đang tính tiền nước" : "Chưa tính được" }), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+											className: "tabular-nums",
+											children: parsed.ok ? `${progress}%` : "0%"
+										})]
+									}),
+									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+										className: "mt-3 h-3 overflow-hidden rounded-full bg-surface/25",
+										role: "progressbar",
+										"aria-valuemin": 0,
+										"aria-valuemax": 100,
+										"aria-valuenow": parsed.ok ? progress : 0,
+										"aria-label": settled ? "Đã tính xong" : "Đang tính tiền nước",
+										children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
+											className: "h-full rounded-full bg-surface motion-reduce:transition-none",
+											style: { width: `${parsed.ok ? progress : 0}%` }
+										})
+									}),
+									result && settled ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+										className: "font-display mt-5 text-4xl leading-none font-semibold break-words tabular-nums sm:text-6xl",
 										children: new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(result.total)
 									}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 										className: "mt-2 text-lg",
 										children: "đồng"
 									})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
-										className: "font-display mt-2 text-3xl font-semibold",
-										children: "Chưa tính được"
+										className: "font-display mt-5 text-3xl font-semibold",
+										children: parsed.ok ? "Đang tính…" : "Kiểm tra số liệu"
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 										className: "mt-4 max-w-md text-sm leading-relaxed text-surface/85",
-										children: "Chưa gồm VAT, phí bảo vệ môi trường và các phụ phí khác."
+										children: "Đơn giá đã gồm VAT và các khoản phí. Tổng là số tiền phải trả."
 									}),
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", {
 										type: "button",
 										className: "mt-5 inline-flex min-h-11 items-center rounded-full bg-surface px-4 text-sm font-semibold text-water disabled:opacity-50",
 										onClick: copyResult,
-										disabled: !result,
+										disabled: !result || !settled,
 										children: copied ? "Đã chép bảng tính" : "Chép bảng tính"
 									})
 								]
 							}),
-							result && parsed.ok ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dl", {
+							result && parsed.ok && settled ? /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(import_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("dl", {
 								className: "grid grid-cols-3 gap-2",
 								children: [
 									/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Stat, {
@@ -424,7 +475,10 @@ function WaterDesk() {
 										})]
 									})
 								]
-							})] }) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+							})] }) : parsed.ok ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
+								className: "rounded-2xl border border-line bg-surface px-4 py-4 text-sm text-muted",
+								children: "Bảng chi tiết hiện khi thanh tiến trình đầy."
+							}) : /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 								className: "rounded-2xl border border-line bg-surface p-5",
 								children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", {
 									className: "text-lg font-semibold",
@@ -447,7 +501,7 @@ function WaterDesk() {
 											children: "Giả định đang dùng, chưa phải quy định chính thức"
 										}),
 										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Định mức bằng 4 m³ nhân số nhân khẩu. Phần trong định mức chia theo ngưỡng cố định của một hộ: 10 m³ bậc 1, 20 m³ bậc 2, phần còn lại bậc 3. Ngưỡng không nhân theo số hộ quy đổi — câu “3 nhân khẩu tương đương 1 hộ” chỉ là diễn giải của ví dụ 32 m³." }),
-										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Không đăng ký nhân khẩu thì định mức bằng 0, toàn bộ sản lượng tính ngoài định mức. Tiền từng dòng làm tròn đến đồng; sản lượng giữ nguyên số lẻ. Mẫu 3 người / 32 m³ ra 425.480 đồng với giá mặc định." })
+										/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: "Không đăng ký nhân khẩu thì định mức bằng 0, toàn bộ sản lượng tính ngoài định mức. Tiền từng dòng làm tròn đến đồng; sản lượng giữ nguyên số lẻ. Giá mặc định đã gồm VAT và phí, nên mẫu 3 người / 32 m³ ra 425.480 đồng là số phải trả." })
 									]
 								})]
 							})
@@ -474,7 +528,7 @@ function WaterDesk() {
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 								className: "text-sm leading-relaxed text-muted",
-								children: "Đồng trên mỗi m³. Giá đã lưu trên máy này."
+								children: "Đồng trên mỗi m³, đã gồm VAT và phí. Giá đã lưu trên máy này."
 							}),
 							/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 								className: "grid gap-3",

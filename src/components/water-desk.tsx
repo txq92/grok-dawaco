@@ -16,6 +16,7 @@ import {
 } from "@/lib/water/calculator";
 
 const STORAGE_KEY = "tien-nuoc:v1";
+const CALC_MS = 900;
 
 const SAMPLE: BillDraft = {
   people: "3",
@@ -51,6 +52,8 @@ export function WaterDesk() {
   const [draft, setDraft] = useState<BillDraft>(SAMPLE);
   const [ready, setReady] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [settled, setSettled] = useState(false);
   const baseId = useId();
 
   useEffect(() => {
@@ -74,6 +77,40 @@ export function WaterDesk() {
   const parsed = useMemo(() => parseBill(draft), [draft]);
   const result = parsed.ok ? calculateBill(parsed.people, parsed.volume, parsed.prices) : null;
   const errors = parsed.ok ? [] : parsed.errors;
+  const signature = parsed.ok
+    ? `${parsed.people}|${parsed.volume}|${PRICE_KEYS.map((key) => parsed.prices[key]).join(",")}`
+    : "";
+
+  useEffect(() => {
+    if (!signature) {
+      setProgress(0);
+      setSettled(false);
+      return;
+    }
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setProgress(100);
+      setSettled(true);
+      return;
+    }
+    setProgress(0);
+    setSettled(false);
+    const start = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const ratio = Math.min(1, (now - start) / CALC_MS);
+      const eased = 1 - (1 - ratio) ** 2;
+      setProgress(Math.round(eased * 100));
+      if (ratio < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        setProgress(100);
+        setSettled(true);
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [signature]);
 
   function setPeople(people: string) {
     setDraft((current) => ({ ...current, people }));
@@ -114,7 +151,7 @@ export function WaterDesk() {
       `Định mức: ${formatVolume(result.quota)}`,
       lines,
       `Tổng: ${formatVnd(result.total)}`,
-      "Chưa gồm VAT và các khoản phí khác.",
+      "Đơn giá đã gồm VAT và các khoản phí.",
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);
@@ -141,12 +178,29 @@ export function WaterDesk() {
         </h1>
         <p className="max-w-2xl text-base leading-relaxed text-muted">
           Nhập số người và lượng nước trong tháng. Trang chia sản lượng vào định mức,
-          từng bậc giá, rồi cộng tiền — chưa gồm thuế và phí.
+          từng bậc giá, rồi cộng tiền. Đơn giá đã gồm VAT và phí.
         </p>
       </header>
 
+      <div className="sticky top-0 z-10 -mx-4 border-b border-line bg-bg/95 px-4 py-3 sm:-mx-6 sm:px-6">
+        <div className="flex items-center justify-between gap-3 text-sm font-medium">
+          <p>{settled ? "Đã tính xong" : parsed.ok ? "Đang tính tiền nước" : "Chưa tính được"}</p>
+          <p className="tabular-nums">{parsed.ok ? `${progress}%` : "0%"}</p>
+        </div>
+        <div
+          className="mt-2 h-3 overflow-hidden rounded-full bg-line"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={parsed.ok ? progress : 0}
+          aria-label={settled ? "Đã tính xong" : "Đang tính tiền nước"}
+        >
+          <div className="h-full rounded-full bg-water" style={{ width: `${parsed.ok ? progress : 0}%` }} />
+        </div>
+      </div>
+
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
-        <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+        <section className="order-2 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5 lg:order-none">
           <h2 className="text-lg font-semibold">Số liệu tháng này</h2>
           <form
             className="flex flex-col gap-4"
@@ -210,35 +264,37 @@ export function WaterDesk() {
         </section>
 
         <section
-          className="flex flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+          className="order-1 flex flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:order-none"
           aria-live="polite"
         >
           <div className="rounded-2xl bg-water px-5 py-6 text-surface sm:px-6">
             <p className="text-sm font-medium text-surface/80">Tổng tiền nước</p>
-            {result ? (
+            {result && settled ? (
               <>
-                <p className="font-display mt-2 text-4xl leading-none font-semibold break-words tabular-nums sm:text-6xl">
+                <p className="font-display mt-5 text-4xl leading-none font-semibold break-words tabular-nums sm:text-6xl">
                   {new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(result.total)}
                 </p>
                 <p className="mt-2 text-lg">đồng</p>
               </>
             ) : (
-              <p className="font-display mt-2 text-3xl font-semibold">Chưa tính được</p>
+              <p className="font-display mt-5 text-3xl font-semibold">
+                {parsed.ok ? "Đang tính…" : "Kiểm tra số liệu"}
+              </p>
             )}
             <p className="mt-4 max-w-md text-sm leading-relaxed text-surface/85">
-              Chưa gồm VAT, phí bảo vệ môi trường và các phụ phí khác.
+              Đơn giá đã gồm VAT và các khoản phí. Tổng là số tiền phải trả.
             </p>
             <button
               type="button"
               className="mt-5 inline-flex min-h-11 items-center rounded-full bg-surface px-4 text-sm font-semibold text-water disabled:opacity-50"
               onClick={copyResult}
-              disabled={!result}
+              disabled={!result || !settled}
             >
               {copied ? "Đã chép bảng tính" : "Chép bảng tính"}
             </button>
           </div>
 
-          {result && parsed.ok ? (
+          {result && parsed.ok && settled ? (
             <>
               <dl className="grid grid-cols-3 gap-2">
                 <Stat label="Định mức" value={formatVolume(result.quota)} />
@@ -280,6 +336,10 @@ export function WaterDesk() {
                 </ul>
               </div>
             </>
+          ) : parsed.ok ? (
+            <p className="rounded-2xl border border-line bg-surface px-4 py-4 text-sm text-muted">
+              Bảng chi tiết hiện khi thanh tiến trình đầy.
+            </p>
           ) : (
             <div className="rounded-2xl border border-line bg-surface p-5">
               <h2 className="text-lg font-semibold">Cần sửa số liệu</h2>
@@ -302,14 +362,14 @@ export function WaterDesk() {
               </p>
               <p>
                 Không đăng ký nhân khẩu thì định mức bằng 0, toàn bộ sản lượng tính ngoài định mức.
-                Tiền từng dòng làm tròn đến đồng; sản lượng giữ nguyên số lẻ. Mẫu 3 người / 32 m³
-                ra 425.480 đồng với giá mặc định.
+                Tiền từng dòng làm tròn đến đồng; sản lượng giữ nguyên số lẻ. Giá mặc định đã gồm VAT
+                và phí, nên mẫu 3 người / 32 m³ ra 425.480 đồng là số phải trả.
               </p>
             </div>
           </aside>
         </section>
 
-        <section className="flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5">
+        <section className="order-3 flex flex-col gap-4 rounded-2xl border border-line bg-surface p-4 sm:p-5 lg:order-none">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Đơn giá</h2>
             <button
@@ -322,7 +382,9 @@ export function WaterDesk() {
               Giá mặc định
             </button>
           </div>
-          <p className="text-sm leading-relaxed text-muted">Đồng trên mỗi m³. Giá đã lưu trên máy này.</p>
+          <p className="text-sm leading-relaxed text-muted">
+            Đồng trên mỗi m³, đã gồm VAT và phí. Giá đã lưu trên máy này.
+          </p>
           <div className="grid gap-3">
             {PRICE_KEYS.map((key) => (
               <label key={key} className="grid gap-1.5" htmlFor={`${baseId}-${key}`}>
