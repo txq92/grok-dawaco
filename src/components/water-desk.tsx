@@ -177,8 +177,7 @@ export function WaterDesk() {
           Tiền nước theo nhân khẩu
         </h1>
         <p className="max-w-2xl text-base leading-relaxed text-muted">
-          Nhập số người và lượng nước trong tháng. Trang chia sản lượng vào định mức,
-          từng bậc giá, rồi cộng tiền. Đơn giá đã gồm VAT và phí.
+          Nhập nhân khẩu và lượng nước để tính tiền tháng này.
         </p>
       </header>
 
@@ -267,31 +266,28 @@ export function WaterDesk() {
           className="order-1 flex flex-col gap-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:order-none"
           aria-live="polite"
         >
-          <div className="rounded-2xl bg-water px-5 py-6 text-surface sm:px-6">
-            <p className="text-sm font-medium text-surface/80">Tổng tiền nước</p>
-            {result && settled ? (
-              <>
-                <p className="font-display mt-5 text-4xl leading-none font-semibold break-words tabular-nums sm:text-6xl">
+          <div className="rounded-2xl border border-water bg-water p-4 text-surface sm:p-5">
+            <h2 className="text-lg font-semibold">Tổng tiền nước</h2>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              {result && settled ? (
+                <p className="font-display text-3xl leading-tight font-semibold break-words tabular-nums sm:text-4xl">
                   {new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(result.total)}
+                  <span className="ml-2 font-sans text-base font-medium">đồng</span>
                 </p>
-                <p className="mt-2 text-lg">đồng</p>
-              </>
-            ) : (
-              <p className="font-display mt-5 text-3xl font-semibold">
-                {parsed.ok ? "Đang tính…" : "Kiểm tra số liệu"}
-              </p>
-            )}
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-surface/85">
-              Đơn giá đã gồm VAT và các khoản phí. Tổng là số tiền phải trả.
-            </p>
-            <button
-              type="button"
-              className="mt-5 inline-flex min-h-11 items-center rounded-full bg-surface px-4 text-sm font-semibold text-water disabled:opacity-50"
-              onClick={copyResult}
-              disabled={!result || !settled}
-            >
-              {copied ? "Đã chép bảng tính" : "Chép bảng tính"}
-            </button>
+              ) : (
+                <p className="text-lg font-medium">
+                  {parsed.ok ? "Đang tính…" : "Kiểm tra số liệu"}
+                </p>
+              )}
+              <button
+                type="button"
+                className="inline-flex min-h-11 items-center rounded-full border border-surface/40 px-3 text-sm font-semibold text-surface disabled:opacity-50"
+                onClick={copyResult}
+                disabled={!result || !settled}
+              >
+                {copied ? "Đã chép" : "Chép bảng tính"}
+              </button>
+            </div>
           </div>
 
           {result && parsed.ok && settled ? (
@@ -338,7 +334,7 @@ export function WaterDesk() {
             </>
           ) : parsed.ok ? (
             <p className="rounded-2xl border border-line bg-surface px-4 py-4 text-sm text-muted">
-              Bảng chi tiết hiện khi thanh tiến trình đầy.
+              Đang cập nhật phân bổ…
             </p>
           ) : (
             <div className="rounded-2xl border border-line bg-surface p-5">
@@ -362,8 +358,7 @@ export function WaterDesk() {
               </p>
               <p>
                 Không đăng ký nhân khẩu thì định mức bằng 0, toàn bộ sản lượng tính ngoài định mức.
-                Tiền từng dòng làm tròn đến đồng; sản lượng giữ nguyên số lẻ. Giá mặc định đã gồm VAT
-                và phí, nên mẫu 3 người / 32 m³ ra 425.480 đồng là số phải trả.
+                Tiền từng dòng làm tròn đến đồng; sản lượng giữ nguyên số lẻ.
               </p>
             </div>
           </aside>
