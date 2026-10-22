@@ -383,7 +383,7 @@ export function WaterDesk() {
             </button>
           </div>
           <p className="text-sm leading-relaxed text-muted">
-            Đồng trên mỗi m³, đã gồm VAT và phí. Giá đã lưu trên máy này.
+            Đồng trên mỗi m³, đã gồm VAT và phí. Nhập 5119 hoặc 5.119; dùng dấu phẩy cho phần lẻ (5.119,5). Giá đã lưu trên máy này.
           </p>
           <div className="grid gap-3">
             {PRICE_KEYS.map((key) => (
@@ -527,3 +527,4 @@ function inputClass(invalid: boolean): string {
     invalid ? "border-ink" : "border-line",
   ].join(" ");
 }
+

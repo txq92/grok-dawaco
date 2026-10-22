@@ -151,6 +151,19 @@ function parseNonNegative(
   return { value };
 }
 
+/**
+ * Unit prices follow Vietnamese notation: dots group thousands and a comma
+ * separates decimals. Ungrouped prices (5119) remain valid. Volume parsing
+ * stays separate so 5.119 m³ still means a fractional volume.
+ */
+function normalizePrice(raw: string): string {
+  const text = raw.trim().replace(/\s/g, "");
+  if (!/^\d+(,\d+)?$/.test(text) && !/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(text)) {
+    return ""; // Reject malformed grouping rather than silently changing value.
+  }
+  return text.replace(/\./g, "").replace(",", ".");
+}
+
 export function parseBill(draft: BillDraft): ParsedBill {
   const errors: BillError[] = [];
 
@@ -167,8 +180,9 @@ export function parseBill(draft: BillDraft): ParsedBill {
 
   const prices = { ...DEFAULT_PRICES };
   for (const key of PRICE_KEYS) {
+    const rawPrice = draft.prices[key] ?? "";
     const parsed = parseNonNegative(
-      draft.prices[key] ?? "",
+      rawPrice.trim().startsWith("-") ? rawPrice : rawPrice.trim() ? (normalizePrice(rawPrice) || "invalid") : "",
       "Nhập đơn giá.",
       "Đơn giá không được âm.",
       "Đơn giá không hợp lệ.",
@@ -198,3 +212,4 @@ export function formatVolume(m3: number): string {
 export function formatUnitPrice(price: number): string {
   return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 3 }).format(price);
 }
+
