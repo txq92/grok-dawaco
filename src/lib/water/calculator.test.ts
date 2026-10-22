@@ -123,3 +123,38 @@ describe("parseBill", () => {
     if (comma.ok) assert.equal(comma.volume, 12.5);
   });
 });
+
+describe("Vietnamese unit-price input", () => {
+  it("treats grouped prices as thousands and preserves the sample total", () => {
+    const parsed = parseBill(draft({ people: "3", volume: "32", prices: {
+      tier1: "5.119", tier2: "6.135", tier3: "7.644", over: "18.101",
+    } }));
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) throw new Error("Expected valid grouped prices");
+    assert.deepEqual(parsed.prices, DEFAULT_PRICES);
+    assert.equal(calculateBill(parsed.people, parsed.volume, parsed.prices).total, 425480);
+  });
+
+  it("supports comma decimals in prices without changing volume dot decimals", () => {
+    const parsed = parseBill(draft({ people: "3", volume: "5.119", prices: {
+      tier1: " 5.119,5 ", tier2: "6135,25", tier3: "1.234.567", over: "18101",
+    } }));
+    assert.equal(parsed.ok, true);
+    if (!parsed.ok) throw new Error("Expected valid decimal prices");
+    assert.equal(parsed.volume, 5.119);
+    assert.equal(parsed.prices.tier1, 5119.5);
+    assert.equal(parsed.prices.tier2, 6135.25);
+    assert.equal(parsed.prices.tier3, 1234567);
+  });
+
+  it("rejects malformed grouping, negative prices and missing prices", () => {
+    for (const raw of ["5.11", "5..119", "51.19.000", "5,119.5", "-5.119", ""]) {
+      const input = draft({ people: "3", volume: "32" });
+      input.prices.tier1 = raw;
+      const parsed = parseBill(input);
+      assert.equal(parsed.ok, false, raw);
+      if (!parsed.ok) assert.ok(parsed.errors.some((error) => error.field === "tier1"), raw);
+    }
+  });
+});
+
